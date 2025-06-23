@@ -13,6 +13,7 @@ class AuthController extends Controller
     /**
      * Handle user registration
      */
+
     public function register(Request $request)
     {
         $request->validate([
@@ -20,7 +21,6 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
-
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -53,7 +53,6 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([

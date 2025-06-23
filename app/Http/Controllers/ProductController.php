@@ -32,7 +32,14 @@ class ProductController extends Controller
             'images' => 'required|array',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
-        $validated['user_id'] = auth()->user()->id;
+
+        // Use Auth facade instead of auth() helper
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $validated['user_id'] = $user->id;
         $product = Product::create($validated);
 
         $imagePaths = [];
