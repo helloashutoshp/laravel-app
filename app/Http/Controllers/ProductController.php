@@ -45,9 +45,15 @@ class ProductController extends Controller
         $imagePaths = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $image->store('products', 'public');
-                $product->images()->create(['image' => $path]);
-                $imagePaths[] = $path;
+                $timestamp = time();
+                $unique = uniqid();
+                $extension = $image->getClientOriginalExtension();
+                $filename = $timestamp . '_' . $product->id . '_' . $unique . '.' . $extension;
+                $destinationPath = public_path('products');
+                $image->move($destinationPath, $filename);
+                $relativePath = 'products/' . $filename;
+                $product->images()->create(['image' => $relativePath]);
+                $imagePaths[] = $relativePath;
             }
         }
 
@@ -60,16 +66,21 @@ class ProductController extends Controller
     /**
      * Display the specified product (only if owned by user).
      */
-    public function show($id)
+    public function show()
     {
-        $product = Product::with('images')
-            ->where('id', $id)
-            ->where('user_id', auth()->user()->id)
-            ->first();
-        if (!$product) {
-            return response()->json(['message' => 'Not found'], 404);
-        }
-        return response()->json($product);
+        $products = Product::with('images')
+            ->where('user_id', Auth::user()->id)
+            ->get();
+
+        // Map images for each product
+        $products->each(function ($product) {
+            $product->images->transform(function ($image) {
+                $image->image = url($image->image);
+                return $image;
+            });
+        });
+        
+        return response()->json($products);
     }
 
     /**
@@ -93,8 +104,14 @@ class ProductController extends Controller
         // Handle new images if provided
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                $path = $image->store('products', 'public');
-                $product->images()->create(['image' => $path]);
+                $timestamp = time();
+                $unique = uniqid();
+                $extension = $image->getClientOriginalExtension();
+                $filename = $timestamp . '_' . $product->id . '_' . $unique . '.' . $extension;
+                $destinationPath = public_path('products');
+                $image->move($destinationPath, $filename);
+                $relativePath = 'products/' . $filename;
+                $product->images()->create(['image' => $relativePath]);
             }
         }
 
