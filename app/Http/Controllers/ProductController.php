@@ -14,7 +14,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products = Product::with('images')
-            ->where('user_id', auth()->user()->id)
+            ->where('user_id', Auth::user()->id)
             ->latest()
             ->paginate(10);
         return response()->json($products);
@@ -88,7 +88,7 @@ class ProductController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $product = Product::where('id', $id)->where('user_id', auth()->user()->id)->first();
+        $product = Product::where('id', $id)->where('user_id', Auth::user()->id)->first();
         if (!$product) {
             return response()->json(['message' => 'Not found'], 404);
         }
@@ -102,6 +102,7 @@ class ProductController extends Controller
         $product->update($validated);
 
         // Handle new images if provided
+        dd($request->all());
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $timestamp = time();
@@ -126,11 +127,30 @@ class ProductController extends Controller
      */
     public function destroy($id)
     {
-        $product = Product::where('id', $id)->where('user_id', auth()->user()->id)->first();
+        $product = Product::where('id', $id)->where('user_id', Auth::user()->id)->first();
         if (!$product) {
             return response()->json(['message' => 'Not found'], 404);
         }
         $product->delete(); // images are deleted by cascade
         return response()->json(['message' => 'Product and its images deleted successfully']);
+    }
+
+    /**
+     * Return a product with images for editing.
+     */
+    public function edit($id)
+    {
+        $product = Product::with('images')
+            ->where('id', $id)
+            ->where('user_id', Auth::user()->id)
+            ->first();
+        if (!$product) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+        $product->images->transform(function ($image) {
+            $image->image = url($image->image);
+            return $image;
+        });
+        return response()->json($product);
     }
 }
