@@ -102,7 +102,7 @@ class ProductController extends Controller
         $product->update($validated);
 
         // Handle new images if provided
-        dd($request->all());
+        // dd($request->all());
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $timestamp = time();
@@ -113,6 +113,22 @@ class ProductController extends Controller
                 $image->move($destinationPath, $filename);
                 $relativePath = 'products/' . $filename;
                 $product->images()->create(['image' => $relativePath]);
+            }
+        }
+
+        $deletedImages = json_decode($request->input('deletedImages', '[]'), true);
+        foreach ($deletedImages as $imageUrl) {
+            // Convert full URL to relative path if needed
+            $parsedUrl = parse_url($imageUrl, PHP_URL_PATH); // e.g. /products/xxx.jpg
+            $relativePath = ltrim($parsedUrl, '/'); // remove leading slash
+
+            $image = $product->images()->where('image', $relativePath)->first();
+            if ($image) {
+                $fullPath = public_path($image->image);
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
+                }
+                $image->delete();
             }
         }
 
@@ -131,7 +147,17 @@ class ProductController extends Controller
         if (!$product) {
             return response()->json(['message' => 'Not found'], 404);
         }
+
+        // Delete all image files from server
+        foreach ($product->images as $image) {
+            $fullPath = public_path($image->image);
+            if (file_exists($fullPath)) {
+                unlink($fullPath);
+            }
+        }
+
         $product->delete(); // images are deleted by cascade
+
         return response()->json(['message' => 'Product and its images deleted successfully']);
     }
 
